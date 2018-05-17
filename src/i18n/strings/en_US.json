@@ -40,6 +40,7 @@
     "Are you sure you want to reject the invitation?": "Are you sure you want to reject the invitation?",
     "Are you sure you want to upload the following files?": "Are you sure you want to upload the following files?",
     "Attachment": "Attachment",
+    "Automatically accept invitations to rooms": "Автоматически принимать приглашения в комнаты",
     "Autoplay GIFs and videos": "Autoplay GIFs and videos",
     "%(senderName)s banned %(targetName)s.": "%(senderName)s banned %(targetName)s.",
     "Ban": "Ban",

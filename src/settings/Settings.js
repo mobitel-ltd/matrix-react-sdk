@@ -76,6 +76,11 @@ export const SETTINGS = {
     //     // level is always appended to the end.
     //     supportedLevelsAreOrdered: false,
     // },
+    "autoAcceptGroupInvites": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("Automatically accept invitations to rooms"),
+        default: false,
+    },
     "feature_rich_quoting": {
         isFeature: true,
         displayName: _td("Message Replies"),
