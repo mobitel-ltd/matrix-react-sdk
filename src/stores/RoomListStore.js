@@ -183,14 +183,6 @@ class RoomListStore extends Store {
             if (me.membership == "invite") {
                 if (val) {
                     console.log('********************* ACCEPT *******************************', room);
-                    // Promise.resolve().then(() => {
-                    //     const signUrl = undefined;
-                    //     dis.dispatch({
-                    //         action: 'join_room',
-                    //         opts: { inviteSignUrl: signUrl },
-                    //     });
-                    //     return Promise.resolve();
-                    // });
                     MatrixClientPeg.get().joinRoom(room.roomId, {inviteSignUrl: undefined});
                     dis.dispatch({
                         action: 'view_room',
