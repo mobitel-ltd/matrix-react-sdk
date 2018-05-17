@@ -17,6 +17,8 @@ import {Store} from 'flux/utils';
 import dis from '../dispatcher';
 import DMRoomMap from '../utils/DMRoomMap';
 import Unread from '../Unread';
+import SettingsStore from "../settings/SettingsStore";
+import MatrixClientPeg from "../MatrixClientPeg";
 
 /**
  * A class for storing application state for categorising rooms in
@@ -176,8 +178,30 @@ class RoomListStore extends Store {
             const me = room.getMember(this._matrixClient.credentials.userId);
             if (!me) return;
 
+            const val = SettingsStore.getValue('autoAcceptGroupInvites');
+
             if (me.membership == "invite") {
-                lists["im.vector.fake.invite"].push(room);
+                if (val) {
+                    console.log('********************* ACCEPT *******************************', room);
+                    // Promise.resolve().then(() => {
+                    //     const signUrl = undefined;
+                    //     dis.dispatch({
+                    //         action: 'join_room',
+                    //         opts: { inviteSignUrl: signUrl },
+                    //     });
+                    //     return Promise.resolve();
+                    // });
+                    MatrixClientPeg.get().joinRoom(room.roomId, {inviteSignUrl: undefined});
+                    dis.dispatch({
+                        action: 'view_room',
+                        room_id: room.roomId
+                    });
+                    lists["im.vector.fake.recent"].push(room);
+//                    lists["im.vector.fake.invite"].push(room);
+                }
+                else {
+                    lists["im.vector.fake.invite"].push(room);
+                }
             } else if (me.membership == "join" || me.membership === "ban" ||
                      (me.membership === "leave" && me.events.member.getSender() !== me.events.member.getStateKey())) {
                 // Used to split rooms via tags

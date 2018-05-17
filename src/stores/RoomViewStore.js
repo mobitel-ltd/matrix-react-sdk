@@ -120,6 +120,7 @@ class RoomViewStore extends Store {
     }
 
     _viewRoom(payload) {
+
         if (payload.room_id) {
             const newState = {
                 roomId: payload.room_id,
