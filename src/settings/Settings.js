@@ -1,5 +1,6 @@
 /*
 Copyright 2017 Travis Ralston
+Copyright 2018 New Vector Ltd
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +21,7 @@ import {
     NotificationBodyEnabledController,
     NotificationsEnabledController,
 } from "./controllers/NotificationControllers";
-
+import LazyLoadingController from "./controllers/LazyLoadingController";
 
 // These are just a bunch of helper arrays to avoid copy/pasting a bunch of times
 const LEVELS_ROOM_SETTINGS = ['device', 'room-device', 'room-account', 'account', 'config'];
@@ -93,11 +94,12 @@ export const SETTINGS = {
         supportedLevels: LEVELS_FEATURE,
         default: false,
     },
-    "feature_tag_panel": {
+    "feature_lazyloading": {
         isFeature: true,
-        displayName: _td("Tag Panel"),
+        displayName: _td("Increase performance by only loading room members on first view"),
         supportedLevels: LEVELS_FEATURE,
-        default: false,
+        controller: new LazyLoadingController(),
+        default: true,
     },
     "MessageComposerInput.dontSuggestEmoji": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
@@ -206,6 +208,10 @@ export const SETTINGS = {
         displayName: _td('Disable Peer-to-Peer for 1:1 calls'),
         default: false,
     },
+    "webrtc_audiooutput": {
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS,
+        default: null,
+    },
     "webrtc_audioinput": {
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS,
         default: null,
@@ -218,10 +224,14 @@ export const SETTINGS = {
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
         default: "en",
     },
-    "analyticsOptOut": {
+    "analyticsOptIn": {
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
-        displayName: _td('Opt out of analytics'),
+        displayName: _td('Send analytics data'),
         default: false,
+    },
+    "showCookieBar": {
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
+        default: true,
     },
     "autocompleteDelay": {
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG,
@@ -246,6 +256,13 @@ export const SETTINGS = {
             "room": _td("Enable URL previews by default for participants in this room"),
         },
         default: true,
+    },
+    "urlPreviewsEnabled_e2ee": {
+        supportedLevels: ['room-device', 'room-account'],
+        displayName: {
+            "room-account": _td("Enable URL previews for this room (only affects you)"),
+        },
+        default: false,
     },
     "roomColor": {
         supportedLevels: LEVELS_ROOM_SETTINGS_WITH_ROOM,
@@ -274,5 +291,14 @@ export const SETTINGS = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td('Enable widget screenshots on supported widgets'),
         default: false,
+    },
+    "PinnedEvents.isOpen": {
+        supportedLevels: ['room-device'],
+        default: false,
+    },
+    "RoomSubList.showEmpty": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td('Show empty room list headings'),
+        default: true,
     },
 };

@@ -1,6 +1,7 @@
 /*
 Copyright 2015, 2016 OpenMarket Ltd
 Copyright 2017 Vector Creations Ltd
+Copyright 2018 New Vector Ltd
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -395,7 +396,17 @@ module.exports = React.createClass({
             powerLevels["events"] = Object.assign({}, this.state.powerLevels["events"] || {});
             powerLevels["events"][powerLevelKey.slice(eventsLevelPrefix.length)] = value;
         } else {
-            powerLevels[powerLevelKey] = value;
+            const keyPath = powerLevelKey.split('.');
+            let parentObj;
+            let currentObj = powerLevels;
+            for (const key of keyPath) {
+                if (!currentObj[key]) {
+                    currentObj[key] = {};
+                }
+                parentObj = currentObj;
+                currentObj = currentObj[key];
+            }
+            parentObj[keyPath[keyPath.length - 1]] = value;
         }
         this.setState({
             powerLevels,
@@ -561,6 +572,11 @@ module.exports = React.createClass({
         });
     },
 
+    _onRoomUpgradeClick: function() {
+        const RoomUpgradeDialog = sdk.getComponent('dialogs.RoomUpgradeDialog');
+        Modal.createTrackedDialog('Upgrade Room Version', '', RoomUpgradeDialog, {room: this.props.room});
+    },
+
     _onRoomMemberMembership: function() {
         // Update, since our banned user list may have changed
         this.forceUpdate();
@@ -664,6 +680,10 @@ module.exports = React.createClass({
                 desc: _t('To remove other users\' messages, you must be a'),
                 defaultValue: 50,
             },
+            "notifications.room": {
+                desc: _t('To notify everyone in the room, you must be a'),
+                defaultValue: 50,
+            },
         };
 
         const banLevel = parseIntWithDefault(powerLevels.ban, powerLevelDescriptors.ban.defaultValue);
@@ -695,26 +715,57 @@ module.exports = React.createClass({
             relatedGroupsEvent={this.props.room.currentState.getStateEvents('m.room.related_groups', '')}
         />;
 
-        let userLevelsSection;
+        let privilegedUsersSection = <div>{ _t('No users have specific privileges in this room') }.</div>; // default
+        let mutedUsersSection;
         if (Object.keys(userLevels).length) {
-            userLevelsSection =
-                <div>
-                    <h3>{ _t('Privileged Users') }</h3>
-                    <ul className="mx_RoomSettings_userLevels">
-                        { Object.keys(userLevels).map(function(user, i) {
-                            return (
-                                <li className="mx_RoomSettings_userLevel" key={user}>
-                                    { _t("%(user)s is a %(userRole)s", {
-                                        user: user,
-                                        userRole: <PowerSelector value={userLevels[user]} disabled={true} />,
-                                    }) }
-                                </li>
-                            );
+            const privilegedUsers = [];
+            const mutedUsers = [];
+
+            Object.keys(userLevels).forEach(function(user) {
+                if (userLevels[user] > defaultUserLevel) { // privileged
+                    privilegedUsers.push(<li className="mx_RoomSettings_userLevel" key={user}>
+                        { _t("%(user)s is a %(userRole)s", {
+                            user: user,
+                            userRole: <PowerSelector value={userLevels[user]} disabled={true} />,
                         }) }
-                    </ul>
-                </div>;
-        } else {
-            userLevelsSection = <div>{ _t('No users have specific privileges in this room') }.</div>;
+                    </li>);
+                } else if (userLevels[user] < defaultUserLevel) { // muted
+                    mutedUsers.push(<li className="mx_RoomSettings_userLevel" key={user}>
+                        { _t("%(user)s is a %(userRole)s", {
+                            user: user,
+                            userRole: <PowerSelector value={userLevels[user]} disabled={true} />,
+                        }) }
+                    </li>);
+                }
+            });
+
+            // comparator for sorting PL users lexicographically on PL descending, MXID ascending. (case-insensitive)
+            const comparator = (a, b) => {
+                const plDiff = userLevels[b.key] - userLevels[a.key];
+                return plDiff !== 0 ? plDiff : a.key.toLocaleLowerCase().localeCompare(b.key.toLocaleLowerCase());
+            };
+
+            privilegedUsers.sort(comparator);
+            mutedUsers.sort(comparator);
+
+            if (privilegedUsers.length) {
+                privilegedUsersSection =
+                    <div>
+                        <h3>{ _t('Privileged Users') }</h3>
+                        <ul className="mx_RoomSettings_userLevels">
+                            { privilegedUsers }
+                        </ul>
+                    </div>;
+            }
+            if (mutedUsers.length) {
+                mutedUsersSection =
+                    <div>
+                        <h3>{ _t('Muted Users') }</h3>
+                        <ul className="mx_RoomSettings_userLevels">
+                            { mutedUsers }
+                        </ul>
+                    </div>;
+            }
         }
 
         const banned = this.props.room.getMembersWithMembership("ban");
@@ -748,15 +799,15 @@ module.exports = React.createClass({
         }
 
         let leaveButton = null;
-        const myMember = this.props.room.getMember(myUserId);
-        if (myMember) {
-            if (myMember.membership === "join") {
+        const myMemberShip = this.props.room.getMyMembership();
+        if (myMemberShip) {
+            if (myMemberShip === "join") {
                 leaveButton = (
                     <AccessibleButton className="mx_RoomSettings_leaveButton" onClick={this.onLeaveClick}>
                         { _t('Leave room') }
                     </AccessibleButton>
                 );
-            } else if (myMember.membership === "leave") {
+            } else if (myMemberShip === "leave") {
                 leaveButton = (
                     <AccessibleButton className="mx_RoomSettings_leaveButton" onClick={this.onForgetClick}>
                         { _t('Forget room') }
@@ -834,7 +885,16 @@ module.exports = React.createClass({
         const powerSelectors = Object.keys(powerLevelDescriptors).map((key, index) => {
             const descriptor = powerLevelDescriptors[key];
 
-            const value = parseIntWithDefault(powerLevels[key], descriptor.defaultValue);
+            const keyPath = key.split('.');
+            let currentObj = powerLevels;
+            for (const prop of keyPath) {
+                if (currentObj === undefined) {
+                    break;
+                }
+                currentObj = currentObj[prop];
+            }
+
+            const value = parseIntWithDefault(currentObj, descriptor.defaultValue);
             return <div key={index} className="mx_RoomSettings_powerLevel">
                 <span className="mx_RoomSettings_powerLevelKey">
                     { descriptor.desc }
@@ -874,6 +934,13 @@ module.exports = React.createClass({
                 </div>
             );
         });
+
+        let roomUpgradeButton = null;
+        if (this.props.room.shouldUpgradeToVersion() && this.props.room.userMayUpgradeRoom(myUserId)) {
+            roomUpgradeButton = <AccessibleButton className="mx_RoomSettings_upgradeButton danger" onClick={this._onRoomUpgradeClick}>
+                { _t("Upgrade room to version %(ver)s", {ver: this.props.room.shouldUpgradeToVersion()}) }
+            </AccessibleButton>;
+        }
 
         return (
             <div className="mx_RoomSettings">
@@ -979,13 +1046,15 @@ module.exports = React.createClass({
                     { unfederatableSection }
                 </div>
 
-                { userLevelsSection }
-
+                { privilegedUsersSection }
+                { mutedUsersSection }
                 { bannedUsersSection }
 
                 <h3>{ _t('Advanced') }</h3>
                 <div className="mx_RoomSettings_settings">
-                    { _t('This room\'s internal ID is') } <code>{ this.props.room.roomId }</code>
+                    { _t('Internal room ID: ') } <code>{ this.props.room.roomId }</code><br />
+                    { _t('Room version number: ') } <code>{ this.props.room.getVersion() }</code><br />
+                    { roomUpgradeButton }
                 </div>
             </div>
         );
