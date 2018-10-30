@@ -152,6 +152,8 @@ class RoomViewStore extends Store {
                 isEditingSettings: false,
             };
 
+            console.log('VIEW PAYLOAD:', payload);
+
             if (this._state.forwardingEvent) {
                 dis.dispatch({
                     action: 'send_event',

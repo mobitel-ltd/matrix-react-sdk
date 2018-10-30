@@ -182,16 +182,16 @@ class RoomListStore extends Store {
 
             const val = SettingsStore.getValue('autoAcceptGroupInvites');
 
-            if (me.membership == "invite") {
+            if (membership == "invite") {
                 if (val) {
                     console.log('********************* ACCEPT *******************************', room);
-                    MatrixClientPeg.get().joinRoom(room.roomId, {inviteSignUrl: undefined});
-                    dis.dispatch({
-                        action: 'view_room',
-                        room_id: room.roomId
-                    });
-                    lists["im.vector.fake.recent"].push(room);
-//                    lists["im.vector.fake.invite"].push(room);
+                    MatrixClientPeg.get().joinRoom(room.roomId);
+
+                    // dis.dispatch({
+                    //     action: 'view_room',
+                    //     room_id: room.roomId,
+                    // });
+                    MatrixClientPeg.get().startClient();
                 }
                 else {
                     lists["im.vector.fake.invite"].push(room);
